@@ -1,2 +1,2 @@
-# ex-seastorm
+# Seastorm
 Seastorm simulation using three.js
