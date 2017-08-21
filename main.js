@@ -7,6 +7,7 @@ var App = (function(){
 	var movement = true;
 	var worldData = new Uint8Array(new ArrayBuffer(worldSize));
 	var clock = new THREE.Clock();
+	var intensity = 1.5;
 
 	return {
 
@@ -31,6 +32,7 @@ var App = (function(){
 			controls.enableZoom = false;
 			controls.autoRotate = true;
 			controls.autoRotateSpeed = .1;
+			controls.enableKeys = false;
 			
 			// Noise setup
 			noise.seed(Math.random()), quality = 1, z = 0;
@@ -96,7 +98,7 @@ var App = (function(){
 				for ( var i = 0; i < worldSize; i ++ ) {
 
 					var x = i % worldWidth, y = ~~ ( i / worldWidth );
-					worldData[ i ] += Math.abs( noise.perlin3( x / quality, y / quality, z ) * quality * 1.5 );
+					worldData[ i ] += Math.abs( noise.perlin3( x / quality, y / quality, z ) * quality * intensity );
 
 				}
 
@@ -119,7 +121,7 @@ var App = (function(){
 				for ( var i = 0; i < worldSize; i ++ ) {
 
 					var x = i % worldWidth, y = ~~ ( i / worldWidth );
-					worldData[ i ] += Math.abs( noise.perlin3( x / quality, y / quality, z ) * quality * 1.5);
+					worldData[ i ] += Math.abs( noise.perlin3( x / quality, y / quality, z ) * quality * intensity);
 					
 				}
 
@@ -176,6 +178,14 @@ var App = (function(){
 			movement = (movement) ? false : true;
 		},
 
+		up: function() {
+			intensity = (intensity >= 1.7) ? 1.7 : (intensity + .01);
+		},
+
+		down: function() {
+			intensity = (intensity <= 0.4) ? 0.4 : (intensity - .01);
+		},
+
 		util : {
 			isTouchDevice: function() {
 				
@@ -203,5 +213,26 @@ window.addEventListener( 'scroll', function(){
 	}else{
 		App.restart();
 	}
+
+}, false );
+
+window.addEventListener( 'keydown' , function(e){
+	
+	e = e || window.event;
+
+    if (e.keyCode == '38') {
+        // up arrow
+         App.up();
+    }
+    else if (e.keyCode == '40') {
+    	// down arrow
+        App.down();
+    }
+    else if (e.keyCode == '37') {
+    	// left arrow
+    }
+    else if (e.keyCode == '39') {
+       // right arrow
+    }
 
 }, false );
