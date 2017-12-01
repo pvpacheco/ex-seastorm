@@ -1,235 +1,212 @@
 var App = (function(){
-  	var container, stats;
-  	var camera, controls, scene, renderer;
-	var mesh, texture;
-	var worldWidth = 264, worldDepth = 264, worldHalfWidth = worldWidth / 2, worldHalfDepth = worldDepth / 2;
-	var worldSize = worldWidth * worldDepth;
-	var movement = true;
-	var worldData = new Uint8Array(new ArrayBuffer(worldSize));
-	var clock = new THREE.Clock();
-	var intensity = 1.5;
+  var container, stats;
+  var camera, controls, scene, renderer;
+  var mesh, texture;
+  var worldWidth = 264, worldDepth = 264, worldHalfWidth = worldWidth / 2, worldHalfDepth = worldDepth / 2;
+  var worldSize = worldWidth * worldDepth;
+  var movement = true;
+  var worldData = new Uint8Array(new ArrayBuffer(worldSize));
+  var clock = new THREE.Clock();
+  var intensity = 1.5;
 
-	return {
+  return {
 
-		init : function() {
-			container = document.createElement( 'div' );
-			container.setAttribute("id", "canvas-container");
-			container.setAttribute("class", "canvas-container");
-			document.body.appendChild( container );
+    init : function() {
+      container = document.createElement( 'div' );
+      container.setAttribute("id", "canvas-container");
+      container.setAttribute("class", "canvas-container");
+      document.body.appendChild( container );
 
-			// Camera setup
-			camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 15000 );
-			camera.position.x = 3000;
-			camera.position.y = worldData[ worldHalfWidth + worldHalfDepth * worldWidth ] * 10 + 3000;
+      // Camera setup
+      camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 15000 );
+      camera.position.x = 3000;
+      camera.position.y = worldData[ worldHalfWidth + worldHalfDepth * worldWidth ] * 10 + 3000;
 
-			// Controls setup
-			controls = new THREE.OrbitControls( camera );
-			controls.rotateSpeed = 0.02;
-			controls.enableDamping = true;
-			controls.dampingFactor = 0.05;
-			controls.minPolarAngle = Math.PI / 3;
-			controls.maxPolarAngle = Math.PI / 3;
-			controls.enableZoom = false;
-			controls.autoRotate = true;
-			controls.autoRotateSpeed = .1;
-			controls.enableKeys = false;
-			
-			// Noise setup
-			noise.seed(Math.random()), quality = 1, z = 0;
+      // Controls setup
+      controls = new THREE.OrbitControls( camera );
+      controls.rotateSpeed = 0.02;
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.05;
+      controls.minPolarAngle = Math.PI / 3;
+      controls.maxPolarAngle = Math.PI / 3;
+      controls.enableZoom = false;
+      controls.autoRotate = true;
+      controls.autoRotateSpeed = .1;
+      controls.enableKeys = false;
 
-			// Scene setup
-			scene = new THREE.Scene();
+      // Noise setup
+      noise.seed(Math.random()), quality = 1, z = 0;
 
-			scene.fog = new THREE.FogExp2( 0x141428, 0.00038 );
+      // Scene setup
+      scene = new THREE.Scene();
 
-			this.generateHeights();
+      scene.fog = new THREE.FogExp2( 0x141428, 0.00038 );
 
-			geometry = new THREE.PlaneBufferGeometry( 7500, 7500, worldWidth - 1, worldDepth - 1 );
-			geometry.rotateX( - Math.PI / 2 );
-			geometry.dynamic = true;
+      this.generateHeights();
 
-			mesh = new THREE.Mesh( geometry, new THREE.MeshBasicMaterial({color:0x999999, wireframe:true}));
+      geometry = new THREE.PlaneBufferGeometry( 7500, 7500, worldWidth - 1, worldDepth - 1 );
+      geometry.rotateX( - Math.PI / 2 );
+      geometry.dynamic = true;
 
-			this.updateMesh();
+      mesh = new THREE.Mesh( geometry, new THREE.MeshBasicMaterial({color:0x999999, wireframe:true}));
 
-			scene.add( mesh );
+      this.updateMesh();
 
-			// Renderer setup
-			renderer = new THREE.WebGLRenderer();
-			renderer.setClearColor( 0x141428 );
-			renderer.setPixelRatio( window.devicePixelRatio );
-			renderer.setSize( window.innerWidth, window.innerHeight );
+      scene.add( mesh );
 
-			container.innerHTML = "";
-			container.appendChild( renderer.domElement );
+      // Renderer setup
+      renderer = new THREE.WebGLRenderer();
+      renderer.setClearColor( 0x141428 );
+      renderer.setPixelRatio( window.devicePixelRatio );
+      renderer.setSize( window.innerWidth, window.innerHeight );
 
-			// Show stats if available
-			try{
-				stats = new Stats();
-				container.appendChild( stats.dom );
-			}catch(e){
+      container.innerHTML = "";
+      container.appendChild( renderer.domElement );
 
-			}
+      // Show stats if available
+      try{
+        stats = new Stats();
+        container.appendChild( stats.dom );
+      }catch(e){
 
-			// Scene fade in
-			container.style.opacity = 0;
-			new TWEEN.Tween(container.style).to({opacity: 1}, 2000 ).start();
+      }
 
-			// Disable controls on touch devices
-			if(this.util.isTouchDevice()) controls.enabled = false, movement = false;
+      // Scene fade in
+      container.style.opacity = 0;
+      new TWEEN.Tween(container.style).to({opacity: 1}, 2000 ).start();
 
-			// Start animation
-			this.animate();
+      // Disable controls on touch devices
+      if(this.util.isTouchDevice()) controls.enabled = false, movement = false;
 
-		},
+      // Start animation
+      this.animate();
 
-		resize: function() {
+    },
 
-			camera.aspect = window.innerWidth / (window.innerHeight);
-			camera.updateProjectionMatrix();
-			renderer.setSize( window.innerWidth, window.innerHeight);
+    resize: function() {
+      camera.aspect = window.innerWidth / (window.innerHeight);
+      camera.updateProjectionMatrix();
+      renderer.setSize( window.innerWidth, window.innerHeight);
+    },
 
-		},
+    generateHeights: function() {
+      for ( var j = 0; j < 4; j ++ ) {
+        for ( var i = 0; i < worldSize; i ++ ) {
+          var x = i % worldWidth, y = ~~ ( i / worldWidth );
+          worldData[ i ] += Math.abs( noise.perlin3( x / quality, y / quality, z ) * quality * intensity );
+        }
 
-		generateHeights: function() {
+        quality *= 5;
+      }
+    },
 
-			for ( var j = 0; j < 4; j ++ ) {
+    updateHeights: function () {
+      quality = 1
+      z += .005;
 
-				for ( var i = 0; i < worldSize; i ++ ) {
+      for ( var i = 0; i < worldSize; i ++ ) {
+        worldData[ i ] = 0;
+      }
 
-					var x = i % worldWidth, y = ~~ ( i / worldWidth );
-					worldData[ i ] += Math.abs( noise.perlin3( x / quality, y / quality, z ) * quality * intensity );
+      for ( var j = 0; j < 4; j ++ ) {
+        for ( var i = 0; i < worldSize; i ++ ) {
+          var x = i % worldWidth, y = ~~ ( i / worldWidth );
+          worldData[ i ] += Math.abs( noise.perlin3( x / quality, y / quality, z ) * quality * intensity);
+        }
 
-				}
+        quality *= 5.5;
+      }
+    },
 
-				quality *= 5;
-			}
+    updateMesh: function(){
+      var vertices = mesh.geometry.attributes.position.array;
 
-		},
+      for ( var i = 0, j = 0, l = vertices.length; i < l; i ++, j += 3 ) {
+        vertices[ j + 1 ] = worldData[ i ] * 10;
+      }
 
-		updateHeights: function () {
+      mesh.geometry.attributes.position.needsUpdate = true;
+    },
 
-			quality = 1
-			z += .005;
+    animate: function(){
+      TWEEN.update();
 
-			for ( var i = 0; i < worldSize; i ++ ) {
-				worldData[ i ] = 0;
-			}
+      requestAnimationFrame(this.animate.bind(this));
+      controls.update();
+      renderer.render( scene, camera );
 
-			for ( var j = 0; j < 4; j ++ ) {
+      if(movement) {
+        this.updateHeights();
+        this.updateMesh();
+      }
 
-				for ( var i = 0; i < worldSize; i ++ ) {
+      if(stats) stats.update();
+    },
 
-					var x = i % worldWidth, y = ~~ ( i / worldWidth );
-					worldData[ i ] += Math.abs( noise.perlin3( x / quality, y / quality, z ) * quality * intensity);
-					
-				}
+    pause: function(){
+      controls.autoRotate = false;
+      movement = false;
+    },
 
-				quality *= 5.5;
-			}
+    restart: function(){
+      controls.autoRotate = true;
+      if(!this.util.isTouchDevice()) movement = true;
+    },
 
-		},
+    toggleMovement: function() {
+      movement = (movement) ? false : true;
+    },
 
-		updateMesh: function(){
+    up: function() {
+      intensity = (intensity >= 1.7) ? 1.7 : (intensity + .01);
+    },
 
-			var vertices = mesh.geometry.attributes.position.array;
+    down: function() {
+      intensity = (intensity <= 0.4) ? 0.4 : (intensity - .01);
+    },
 
-			for ( var i = 0, j = 0, l = vertices.length; i < l; i ++, j += 3 ) {
-
-				vertices[ j + 1 ] = worldData[ i ] * 10;
-
-			}
-
-			mesh.geometry.attributes.position.needsUpdate = true;
-
-		},
-
-		animate: function(){
-			TWEEN.update();
-
-			requestAnimationFrame(this.animate.bind(this));
-			controls.update();
-			renderer.render( scene, camera );
-
-			if(movement) {
-				this.updateHeights();
-				this.updateMesh();
-			}
-
-			if(stats) stats.update();
-
-		},
-
-		pause: function(){
-
-			controls.autoRotate = false;
-			movement = false;
-
-		},
-
-		restart: function(){
-
-			controls.autoRotate = true;
-			if(!this.util.isTouchDevice()) movement = true;
-
-		},
-
-		toggleMovement: function() {
-			movement = (movement) ? false : true;
-		},
-
-		up: function() {
-			intensity = (intensity >= 1.7) ? 1.7 : (intensity + .01);
-		},
-
-		down: function() {
-			intensity = (intensity <= 0.4) ? 0.4 : (intensity - .01);
-		},
-
-		util : {
-			isTouchDevice: function() {
-				
-				return 'ontouchstart' in window        // works on most browsers 
-				|| navigator.maxTouchPoints;       // works on IE10/11 and Surface
-			
-			}
-		}
-	};
+    util : {
+      isTouchDevice: function() {
+        return 'ontouchstart' in window        // works on most browsers
+        || navigator.maxTouchPoints;       // works on IE10/11 and Surface
+      }
+    }
+  };
 })();
 
 // Window events setup
 window.addEventListener( 'DOMContentLoaded', function(){
-	App.init();
+  App.init();
 }, false );
 
 window.addEventListener( 'resize', function(){
-	App.resize();			
+  App.resize();
 }, false );
 
 window.addEventListener( 'scroll', function(){
 
-	if(document.body.scrollTop > window.innerHeight) {
-		App.pause();
-	}else{
-		App.restart();
-	}
+  if(document.body.scrollTop > window.innerHeight) {
+    App.pause();
+  }else{
+    App.restart();
+  }
 
 }, false );
 
 window.addEventListener( 'keydown' , function(e){
-	
-	e = e || window.event;
+
+  e = e || window.event;
 
     if (e.keyCode == '38') {
         // up arrow
          App.up();
     }
     else if (e.keyCode == '40') {
-    	// down arrow
+      // down arrow
         App.down();
     }
     else if (e.keyCode == '37') {
-    	// left arrow
+      // left arrow
     }
     else if (e.keyCode == '39') {
        // right arrow
